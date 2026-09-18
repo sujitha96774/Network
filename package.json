@@ -1,0 +1,24 @@
+{
+  "name": "campus-network-simulator",
+  "version": "1.0.0",
+  "description": "Multi-Area Campus Network Simulator Using LAN, MAN and WAN in JavaScript",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "cli": "node cli.js",
+    "test": "node test.js"
+  },
+  "keywords": [
+    "network-simulator",
+    "lan",
+    "man",
+    "wan",
+    "routing",
+    "dijkstra",
+    "nat",
+    "firewall",
+    "packet-sniffer"
+  ],
+  "author": "Google DeepMind pair programmer",
+  "license": "MIT"
+}

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Area Campus Network Simulator (LAN, MAN, WAN)</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Top Header & Toolbar -->
+    <header>
+        <div class="brand">
+            <h1>CampusNet Simulator</h1>
+            <span class="badge">Multi-Area (LAN / MAN / WAN)</span>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="playPauseBtn">|| Pause</button>
+            <button class="btn" id="stepBtn">&gt;| Step</button>
+
+            <div class="speed-wrapper">
+                <span>Speed:</span>
+                <input type="range" class="speed-slider" id="speedSlider" min="2" max="50" value="10">
+                <span id="speedVal" style="color: #fff; font-family: var(--font-mono); font-weight: 700;">1.0x</span>
+            </div>
+
+            <button class="btn btn-success" id="trafficWizBtn">[+] Traffic Wizard</button>
+
+            <span style="color: var(--text-muted); font-size: 0.8rem;">Presets:</span>
+            <select class="select-control" id="presetSelect">
+                <option value="0">1. Intra-Department LAN Ping (CS Lab)</option>
+                <option value="1">2. Inter-Building MAN Access (Web Portal)</option>
+                <option value="2">3. Remote WAN Branch Communication</option>
+                <option value="3">4. Cloud Web Access with Border NAT</option>
+                <option value="4">5. MAN Fiber Failure & SPF Dynamic Reroute</option>
+                <option value="5">6. DDoS Attack & Firewall Defense</option>
+            </select>
+            <button class="btn btn-purple" id="runPresetBtn">Run Scenario</button>
+
+            <button class="btn" id="resetBtn">Reset Network</button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Split -->
+    <div class="workspace">
+        <!-- Interactive Canvas Topology -->
+        <div class="canvas-container">
+            <canvas id="networkCanvas"></canvas>
+        </div>
+
+        <!-- Bottom Wireshark / Log Panel -->
+        <div class="bottom-panel">
+            <div class="tab-bar">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="snifferTab">Wireshark Packet Inspector</button>
+                    <button class="tab-btn" data-tab="logTab">Live Simulation Event Log</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <select class="select-control" id="protoFilter" style="padding: 3px 8px; font-size: 0.75rem;">
+                        <option value="ALL">ALL Protocols</option>
+                        <option value="ICMP">ICMP</option>
+                        <option value="HTTP">HTTP</option>
+                        <option value="DNS">DNS</option>
+                        <option value="TCP">TCP</option>
+                        <option value="DROPPED">DROPPED</option>
+                    </select>
+                    <input type="text" class="select-control" id="packetSearch" placeholder="Search IP / Info..." style="padding: 3px 8px; font-size: 0.75rem; width: 130px;">
+                    <button class="btn" id="clearPacketsBtn" style="padding: 3px 8px; font-size: 0.75rem;">Clear</button>
+                </div>
+            </div>
+
+            <div class="tab-content">
+                <!-- Wireshark Tab -->
+                <div class="tab-pane active" id="snifferTab">
+                    <div class="sniffer-split">
+                        <div class="sniffer-table-container">
+                            <table class="sniffer-table">
+                                <thead>
+                                    <tr>
+                                        <th>No.</th>
+                                        <th>Time</th>
+                                        <th>Source IP</th>
+                                        <th>Dest IP</th>
+                                        <th>Protocol</th>
+                                        <th>Length</th>
+                                        <th>Status</th>
+                                        <th>Info / Summary</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="packetTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="dissection-container" id="dissectionView">
+Select a packet from the table above to view deep protocol dissection across Layer 2, Layer 3, Layer 4, and Layer 7.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log Tab -->
+                <div class="tab-pane" id="logTab">
+                    <div class="log-container" id="logConsole">
+                        <div style="color: #60a5fa;">[SYSTEM] Multi-Area Campus Network Simulator initialized. Ready for simulation.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Metrics & Live Chart Dashboard -->
+    <div class="metrics-bar">
+        <div class="metrics-cards">
+            <div class="metric-card">
+                <span class="title">Packets Sent</span>
+                <span class="value" id="mSent" style="color: var(--accent-blue);">0</span>
+            </div>
+            <div class="metric-card">
+                <span class="title">Delivered</span>
+                <span class="value" id="mDelivered" style="color: var(--accent-green);">0</span>
+            </div>
+            <div class="metric-card">
+                <span class="title">Dropped</span>
+                <span class="value" id="mDropped" style="color: var(--accent-red);">0</span>
+            </div>
+            <div class="metric-card">
+                <span class="title">Delivery Rate</span>
+                <span class="value" id="mRate" style="color: var(--accent-purple);">100.0%</span>
+            </div>
+            <div class="metric-card">
+                <span class="title">Avg Latency</span>
+                <span class="value" id="mLatency" style="color: var(--accent-orange);">0.0 ms</span>
+            </div>
+            <div class="metric-card">
+                <span class="title">Transferred</span>
+                <span class="value" id="mBytes" style="color: #fff;">0.0 KB</span>
+            </div>
+        </div>
+
+        <div class="chart-wrapper">
+            <canvas id="throughputCanvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Device Modal (Inspector & Terminal) -->
+    <div class="modal-overlay" id="deviceModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 id="modalDeviceTitle">Device Inspector</h2>
+                <button class="btn" id="closeModalBtn" style="padding: 2px 8px;">✕</button>
+            </div>
+            <div class="modal-body" id="modalDeviceBody"></div>
+        </div>
+    </div>
+
+    <!-- Traffic Wizard Modal -->
+    <div class="modal-overlay" id="trafficModal">
+        <div class="modal-card" style="width: 500px;">
+            <div class="modal-header">
+                <h2>Network Packet & Traffic Generator Wizard</h2>
+            </div>
+            <div class="modal-body" style="gap: 14px;">
+                <div>
+                    <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Source Device:</label>
+                    <select class="select-control" id="wizSource" style="width: 100%;"></select>
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Destination Device / Server:</label>
+                    <select class="select-control" id="wizDest" style="width: 100%;"></select>
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Protocol / Traffic Type:</label>
+                    <select class="select-control" id="wizType" style="width: 100%;">
+                        <option value="0">ICMP Ping Echo (Network Diagnostics)</option>
+                        <option value="1">HTTP Web Request (GET Portal / Webpage)</option>
+                        <option value="2">DNS Domain Resolution Query</option>
+                        <option value="3">Continuous TCP Data Stream (Video/FTP)</option>
+                        <option value="4">DDoS SYN Flood Attack Burst</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Payload / URL / Domain:</label>
+                    <input type="text" class="select-control" id="wizPayload" value="portal.campus.edu" style="width: 100%;">
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Packet Count / Duration:</label>
+                    <input type="number" class="select-control" id="wizCount" value="4" min="1" max="100" style="width: 100%;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" id="wizCancelBtn">Cancel</button>
+                <button class="btn btn-success" id="wizSendBtn">Transmit Traffic</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right-click Context Menu -->
+    <div class="context-menu" id="contextMenu"></div>
+
+    <!-- JavaScript Scripts -->
+    <script src="js/models/AreaType.js"></script>
+    <script src="js/models/ProtocolType.js"></script>
+    <script src="js/models/NetworkInterface.js"></script>
+    <script src="js/models/NetworkLink.js"></script>
+    <script src="js/models/Packet.js"></script>
+    <script src="js/models/Device.js"></script>
+    <script src="js/models/HostDevice.js"></script>
+    <script src="js/models/SwitchDevice.js"></script>
+    <script src="js/models/RouterDevice.js"></script>
+    <script src="js/models/ServerDevice.js"></script>
+
+    <script src="js/protocols/RoutingEngine.js"></script>
+    <script src="js/protocols/NatEngine.js"></script>
+    <script src="js/protocols/FirewallEngine.js"></script>
+    <script src="js/protocols/DnsService.js"></script>
+    <script src="js/protocols/DhcpService.js"></script>
+
+    <script src="js/simulator/NetworkMetrics.js"></script>
+    <script src="js/simulator/NetworkSimulator.js"></script>
+    <script src="js/simulator/TrafficGenerator.js"></script>
+    <script src="js/simulator/ScenarioManager.js"></script>
+
+    <script src="js/cli/VirtualCLI.js"></script>
+
+    <script src="js/ui/TopologyCanvas.js"></script>
+    <script src="js/ui/PacketInspector.js"></script>
+    <script src="js/ui/DeviceModal.js"></script>
+    <script src="js/ui/TrafficWizard.js"></script>
+    <script src="js/ui/StatsChart.js"></script>
+    <script src="js/ui/App.js"></script>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            window.app = new CampusNet.App();
+        });
+    </script>
+</body>
+</html>
